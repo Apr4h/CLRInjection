@@ -59,5 +59,13 @@ namespace CLRInjection
         [DllImport("kernel32.dll")]
         public static extern bool IsWow64Process(IntPtr hProcess, out bool lpSystemInfo);
 
+        [DllImport("kernel32.dll")]
+        public static extern bool VirtualProtectEx(IntPtr hProcess, IntPtr lpAddress, UIntPtr dwSize, uint flNewProtect, out uint lpflOldProtect);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool Wow64SetThreadContext(IntPtr thread, ref CONTEXT context);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool Wow64GetThreadContext(IntPtr thread, ref CONTEXT context);
     }
 }
